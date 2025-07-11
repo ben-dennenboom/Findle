@@ -1,0 +1,32 @@
+{
+    "name": "dennenboom/findle",
+    "description": "GDPR-friendly page view tracking and analytics package for Laravel applications",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Dennenboom\\Findle\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ayoub",
+            "email": "ayoub.ezzini@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.0",
+        "illuminate/support": "^9.0|^10.0|^11.0|^12.0",
+        "illuminate/database": "^9.0|^10.0|^11.0|^12.0",
+        "illuminate/http": "^9.0|^10.0|^11.0|^12.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Dennenboom\\Findle\\Providers\\FindleServiceProvider"
+            ]
+        }
+    }
+}
