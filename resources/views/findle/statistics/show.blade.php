@@ -45,7 +45,7 @@
       <div class="flex items-center">
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-600">First Visit</p>
-          <p class="text-sm text-gray-900">{{ $pageViewStats->first_visit_at ? $pageViewStats->first_visit_at->format('Y-m-d H:i') : 'Unknown' }}</p>
+          <p class="text-sm text-gray-900">{{ $pageViewStats->first_visit_at ? \Carbon\Carbon::parse($pageViewStats->first_visit_at)->format('Y-m-d H:i') : 'Unknown' }}</p>
         </div>
       </div>
     </div>
@@ -54,7 +54,7 @@
       <div class="flex items-center">
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-600">Last Visit</p>
-          <p class="text-sm text-gray-900">{{ $pageViewStats->last_visit_at ? $pageViewStats->last_visit_at->format('Y-m-d H:i') : 'Unknown' }}</p>
+          <p class="text-sm text-gray-900">{{ $pageViewStats->last_visit_at ? \Carbon\Carbon::parse($pageViewStats->last_visit_at)->format('Y-m-d H:i') : 'Unknown' }}</p>
         </div>
       </div>
     </div>
