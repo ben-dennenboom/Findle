@@ -33,7 +33,7 @@ class FindleServiceProvider extends ServiceProvider
             'findle-migrations'
         );
 
-        $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'findle');
+        $this->loadViewsFrom(__DIR__ . '/../../resources/views/findle', 'findle');
 
         $this->publishes(
             [
