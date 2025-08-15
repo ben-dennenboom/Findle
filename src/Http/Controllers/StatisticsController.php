@@ -35,14 +35,19 @@ class StatisticsController extends Controller
         $pageViews = $query->paginate(25);
         $pageViews->appends($request->query());
 
+        $days = $request->get('days', 90);
+        $sinceDate = now()->subDays($days);
+
         $totalStats = [
-            'total_pages'           => PageView::select('url')->distinct()->count(),
-            'total_unique_visitors' => PageView::select('visitor_hash')->distinct()->count(),
-            'total_visits'          => PageView::count(),
-            'visits_today'          => PageView::whereDate('created_at', today())->count(),
-            'visits_this_week'      => PageView::where('created_at', '>=', now()->startOfWeek())->count(),
-            'visits_this_month'     => PageView::where('created_at', '>=', now()->startOfMonth())->count(),
+            'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->count(),
+            'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)
+                ->select('visitor_hash')->distinct()->count(),
+            'avg_views_per_visit' => $this->calculateAvgViewsPerVisit($sinceDate),
+            'top_pages'           => $this->getTopPages($sinceDate, 5),
+            'days'                => $days,
         ];
+
+        $dailyStats = $this->getDailyStats($sinceDate);
 
         return view(
             'findle::statistics.index',
@@ -51,9 +56,48 @@ class StatisticsController extends Controller
                 'sortBy',
                 'sortDirection',
                 'search',
-                'totalStats'
+                'totalStats',
+                'dailyStats'
             )
         );
+    }
+
+    private function calculateAvgViewsPerVisit($since)
+    {
+        $totalVisits = PageView::where('created_at', '>=', $since)->count();
+        $uniqueVisits = PageView::where('created_at', '>=', $since)
+            ->select('visitor_hash')->distinct()->count();
+
+        return $uniqueVisits > 0 ? round($totalVisits / $uniqueVisits, 2) : 0;
+    }
+
+    private function getTopPages($since, $limit)
+    {
+        return PageView::where('created_at', '>=', $since)
+            ->select('url')
+            ->selectRaw('COUNT(*) as visit_count')
+            ->groupBy('url')
+            ->orderBy('visit_count', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    private function getDailyStats($since)
+    {
+        return PageView::where('created_at', '>=', $since)
+            ->selectRaw('DATE(created_at) as date')
+            ->selectRaw('COUNT(*) as total_visits')
+            ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visits')
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date'          => $item->date,
+                    'total_visits'  => $item->total_visits,
+                    'unique_visits' => $item->unique_visits,
+                ];
+            });
     }
 
     public function show(Request $request)

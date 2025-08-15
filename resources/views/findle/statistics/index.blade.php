@@ -17,25 +17,7 @@
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Total Pages</p>
-          <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_pages']) }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Unique Visitors</p>
-          <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_unique_visitors']) }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Total Visits</p>
+          <p class="text-sm font-medium text-gray-600">Total Visits ({{ $totalStats['days'] }} days)</p>
           <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_visits']) }}</p>
         </div>
       </div>
@@ -44,9 +26,47 @@
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Visits Today</p>
-          <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['visits_today']) }}</p>
+          <p class="text-sm font-medium text-gray-600">Total Unique Visits ({{ $totalStats['days'] }} days)</p>
+          <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_unique_visits']) }}</p>
         </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-600">Avg Views Per Visit ({{ $totalStats['days'] }} days)</p>
+          <p class="text-2xl font-bold text-gray-900">{{ $totalStats['avg_views_per_visit'] }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-1">
+          <p class="text-sm font-medium text-gray-600">Top 5 Most Viewed Pages</p>
+          <div class="mt-2 space-y-1">
+            @foreach($totalStats['top_pages']->take(3) as $index => $page)
+              <div class="text-xs text-gray-600 truncate" title="{{ $page->url }}">
+                {{ $index + 1 }}. {{ Str::limit($page->url, 25) }} ({{ $page->visit_count }})
+              </div>
+            @endforeach
+            @if($totalStats['top_pages']->count() > 3)
+              <div class="text-xs text-gray-500">+{{ $totalStats['top_pages']->count() - 3 }} more</div>
+            @endif
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-lg shadow mb-8">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-medium text-gray-900">Daily Visits (Last {{ $totalStats['days'] }} Days)</h2>
+    </div>
+    <div class="p-6">
+      <div class="relative">
+        <canvas id="visitsChart" width="800" height="300"></canvas>
       </div>
     </div>
   </div>
@@ -169,5 +189,80 @@
     @endif
   </div>
 </div>
+
+<script src="{{ config('findle.assets.chartjs') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('visitsChart').getContext('2d');
+
+    const dailyStats = @json($dailyStats);
+
+    const labels = dailyStats.map(stat => {
+      const date = new Date(stat.date);
+      return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+    });
+
+    const totalVisitsData = dailyStats.map(stat => stat.total_visits);
+    const uniqueVisitsData = dailyStats.map(stat => stat.unique_visits);
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Total Visits',
+            data: totalVisitsData,
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.1,
+            fill: false
+          },
+          {
+            label: 'Unique Visits',
+            data: uniqueVisitsData,
+            borderColor: 'rgb(16, 185, 129)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.1,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          },
+          x: {
+            display: true,
+            ticks: {
+              maxTicksLimit: 10
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        }
+      }
+    });
+  });
+</script>
 </body>
 </html>
