@@ -170,15 +170,24 @@ class StatisticsController extends Controller
                 foreach ($view->query_data as $key => $values) {
                     if (is_array($values)) {
                         foreach ($values as $value) {
-                            $stats[] = $key . '=' . $value;
+                            $stats[] = [
+                                'param' => $key . '=' . $value,
+                                'weight' => $view->visits_count
+                            ];
                         }
                     } else {
-                        $stats[] = $key . '=' . $values;
+                        $stats[] = [
+                            'param' => $key . '=' . $values,
+                            'weight' => $view->visits_count
+                        ];
                     }
                 }
                 return $stats;
             })
-            ->countBy()
+            ->groupBy('param')
+            ->map(function ($group) {
+                return $group->sum('weight');
+            })
             ->sortDesc()
             ->take(10);
 

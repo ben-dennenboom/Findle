@@ -5,6 +5,7 @@ namespace Dennenboom\Findle\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class PageView extends Model
 {
@@ -38,6 +39,14 @@ class PageView extends Model
         array $queryData = [],
     ): bool {
         try {
+            $rateLimitKey = "findle_view_rate_limit_{$visitorHash}_" . md5($url);
+            
+            if (Cache::has($rateLimitKey)) {
+                return true;
+            }
+            
+            Cache::put($rateLimitKey, true, 10);
+            
             $existingRecord = static::where('url', $url)
                 ->where('visitor_hash', $visitorHash)
                 ->first();
