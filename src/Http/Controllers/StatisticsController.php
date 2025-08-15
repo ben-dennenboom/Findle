@@ -17,7 +17,7 @@ class StatisticsController extends Controller
 
         $query = PageView::select('url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
-            ->selectRaw('COUNT(*) as total_visits')
+            ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('MAX(created_at) as last_visit_at')
             ->groupBy('url');
 
@@ -39,7 +39,7 @@ class StatisticsController extends Controller
         $sinceDate = now()->subDays($days);
 
         $totalStats = [
-            'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->count(),
+            'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->sum('visits_count'),
             'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)
                 ->select('visitor_hash')->distinct()->count(),
             'avg_views_per_visit' => $this->calculateAvgViewsPerVisit($sinceDate),
@@ -64,7 +64,7 @@ class StatisticsController extends Controller
 
     private function calculateAvgViewsPerVisit($since)
     {
-        $totalVisits = PageView::where('created_at', '>=', $since)->count();
+        $totalVisits = PageView::where('created_at', '>=', $since)->sum('visits_count');
         $uniqueVisits = PageView::where('created_at', '>=', $since)
             ->select('visitor_hash')->distinct()->count();
 
@@ -75,7 +75,7 @@ class StatisticsController extends Controller
     {
         return PageView::where('created_at', '>=', $since)
             ->select('url')
-            ->selectRaw('COUNT(*) as visit_count')
+            ->selectRaw('SUM(visits_count) as visit_count')
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
             ->limit($limit)
@@ -86,7 +86,7 @@ class StatisticsController extends Controller
     {
         return PageView::where('created_at', '>=', $since)
             ->selectRaw('DATE(created_at) as date')
-            ->selectRaw('COUNT(*) as total_visits')
+            ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visits')
             ->groupBy('date')
             ->orderBy('date', 'asc')
@@ -110,13 +110,13 @@ class StatisticsController extends Controller
 
         $pageViewStats = PageView::where('url', $url)
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
-            ->selectRaw('COUNT(*) as total_visits')
+            ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('MAX(created_at) as last_visit_at')
             ->selectRaw('MIN(created_at) as first_visit_at')
             ->first();
 
         $topOtherPages = PageView::select('url')
-            ->selectRaw('COUNT(*) as visit_count')
+            ->selectRaw('SUM(visits_count) as visit_count')
             ->whereIn('visitor_hash', function ($query) use ($url) {
                 $query->select('visitor_hash')
                     ->from(config('findle.table_name', 'page_views'))
@@ -130,7 +130,7 @@ class StatisticsController extends Controller
 
         $userAgentStats = PageView::where('url', $url)
             ->selectRaw('user_agent')
-            ->selectRaw('COUNT(*) as count')
+            ->selectRaw('SUM(visits_count) as count')
             ->whereNotNull('user_agent')
             ->groupBy('user_agent')
             ->orderBy('count', 'desc')
@@ -166,7 +166,17 @@ class StatisticsController extends Controller
             ->where('query_data', '!=', '[]')
             ->get()
             ->flatMap(function ($view) {
-                return collect($view->query_data)->keys();
+                $stats = [];
+                foreach ($view->query_data as $key => $values) {
+                    if (is_array($values)) {
+                        foreach ($values as $value) {
+                            $stats[] = $key . '=' . $value;
+                        }
+                    } else {
+                        $stats[] = $key . '=' . $values;
+                    }
+                }
+                return $stats;
             })
             ->countBy()
             ->sortDesc()
@@ -174,7 +184,7 @@ class StatisticsController extends Controller
 
         $dailyVisits = PageView::where('url', $url)
             ->selectRaw('DATE(created_at) as date')
-            ->selectRaw('COUNT(*) as visits')
+            ->selectRaw('SUM(visits_count) as visits')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visits')
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('date')

@@ -7,9 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        $tableName = config('findle.table_name', 'page_views');
-
-        Schema::create($tableName, function (Blueprint $table) {
+        Schema::create(config('findle.table_name', 'page_views'), function (Blueprint $table) {
             $table->id();
             $table->string('url')->index();
             $table->string('visitor_hash')->index();
@@ -24,7 +22,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        $tableName = config('findle.table_name', 'page_views');
-        Schema::dropIfExists($tableName);
+        Schema::dropIfExists(config('findle.table_name', 'page_views'));
     }
 };

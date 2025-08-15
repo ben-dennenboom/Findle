@@ -16,6 +16,7 @@ class PageView extends Model
         'user_agent',
         'referrer',
         'query_data',
+        'visits_count',
     ];
 
     protected $casts = [
@@ -37,18 +38,31 @@ class PageView extends Model
         array $queryData = [],
     ): bool {
         try {
-            static::updateOrCreate(
-                [
-                    'url' => $url,
-                    'visitor_hash' => $visitorHash,
-                ],
-                [
+            $existingRecord = static::where('url', $url)
+                ->where('visitor_hash', $visitorHash)
+                ->first();
+
+            if ($existingRecord) {
+                $existingRecord->increment('visits_count');
+                
+                $mergedQueryData = static::mergeQueryData($existingRecord->query_data ?? [], $queryData);
+                
+                $existingRecord->update([
                     'user_agent' => $userAgent,
                     'referrer'   => $referrer,
-                    'query_data' => $queryData,
+                    'query_data' => $mergedQueryData,
                     'updated_at' => now(),
-                ]
-            );
+                ]);
+            } else {
+                static::create([
+                    'url'          => $url,
+                    'visitor_hash' => $visitorHash,
+                    'user_agent'   => $userAgent,
+                    'referrer'     => $referrer,
+                    'query_data'   => $queryData,
+                    'visits_count' => 1,
+                ]);
+            }
 
             return true;
         } catch (\Exception $e) {
@@ -56,5 +70,26 @@ class PageView extends Model
 
             return false;
         }
+    }
+
+    private static function mergeQueryData(array $existing, array $new): array
+    {
+        $merged = $existing;
+        
+        foreach ($new as $key => $value) {
+            if (!isset($merged[$key])) {
+                $merged[$key] = [];
+            }
+            
+            if (!is_array($merged[$key])) {
+                $merged[$key] = [$merged[$key]];
+            }
+            
+            if (!in_array($value, $merged[$key])) {
+                $merged[$key][] = $value;
+            }
+        }
+        
+        return $merged;
     }
 }
