@@ -157,7 +157,7 @@ class TrackPageViews
             return $response;
         }
 
-        $baseUrl = $request->url();
+        $fullUrl = $request->fullUrl();
         $userAgent = $request->userAgent() ?? '';
         $referrer = $request->headers->get('referer');
 
@@ -173,7 +173,7 @@ class TrackPageViews
         $hash = $this->generateVisitorHash($request);
 
         PageView::recordView(
-            $baseUrl,
+            $fullUrl,
             $hash,
             $userAgent,
             $referrer,

@@ -15,17 +15,17 @@ class StatisticsController extends Controller
         $sortDirection = $request->get('direction', 'desc');
         $search = $request->get('search', '');
 
-        $query = PageView::select('url')
+        $query = PageView::selectRaw('SUBSTRING_INDEX(url, "?", 1) as base_url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('MAX(created_at) as last_visit_at')
-            ->groupBy('url');
+            ->groupBy('base_url');
 
         if ($search) {
             $query->where('url', 'like', '%' . $search . '%');
         }
 
-        $allowedSorts = ['url', 'unique_visitors', 'total_visits', 'last_visit_at'];
+        $allowedSorts = ['base_url', 'unique_visitors', 'total_visits', 'last_visit_at'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortDirection);
         } else {
@@ -74,7 +74,7 @@ class StatisticsController extends Controller
     private function getTopPages($since, $limit)
     {
         return PageView::where('created_at', '>=', $since)
-            ->select('url')
+            ->selectRaw('SUBSTRING_INDEX(url, "?", 1) as url')
             ->selectRaw('SUM(visits_count) as visit_count')
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
@@ -108,27 +108,27 @@ class StatisticsController extends Controller
             return redirect()->route('findle.statistics.index');
         }
 
-        $pageViewStats = PageView::where('url', $url)
+        $pageViewStats = PageView::where('url', 'like', $url . '%')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('MAX(created_at) as last_visit_at')
             ->selectRaw('MIN(created_at) as first_visit_at')
             ->first();
 
-        $topOtherPages = PageView::select('url')
+        $topOtherPages = PageView::selectRaw('SUBSTRING_INDEX(url, "?", 1) as url')
             ->selectRaw('SUM(visits_count) as visit_count')
             ->whereIn('visitor_hash', function ($query) use ($url) {
                 $query->select('visitor_hash')
                     ->from(config('findle.table_name', 'page_views'))
-                    ->where('url', $url);
+                    ->where('url', 'like', $url . '%');
             })
-            ->where('url', '!=', $url)
+            ->whereRaw('SUBSTRING_INDEX(url, "?", 1) != ?', [$url])
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
             ->limit(10)
             ->get();
 
-        $userAgentStats = PageView::where('url', $url)
+        $userAgentStats = PageView::where('url', 'like', $url . '%')
             ->selectRaw('user_agent')
             ->selectRaw('SUM(visits_count) as count')
             ->whereNotNull('user_agent')
@@ -161,7 +161,7 @@ class StatisticsController extends Controller
                 return $group->sum('count');
             });
 
-        $queryDataStats = PageView::where('url', $url)
+        $queryDataStats = PageView::where('url', 'like', $url . '?%')
             ->whereNotNull('query_data')
             ->where('query_data', '!=', '[]')
             ->get()
@@ -191,7 +191,7 @@ class StatisticsController extends Controller
             ->sortDesc()
             ->take(10);
 
-        $dailyVisits = PageView::where('url', $url)
+        $dailyVisits = PageView::where('url', 'like', $url . '%')
             ->selectRaw('DATE(created_at) as date')
             ->selectRaw('SUM(visits_count) as visits')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visits')

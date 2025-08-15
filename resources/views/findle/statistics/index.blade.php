@@ -46,14 +46,11 @@
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-600">Top 5 Most Viewed Pages</p>
           <div class="mt-2 space-y-1">
-            @foreach($totalStats['top_pages']->take(3) as $index => $page)
-              <div class="text-xs text-gray-600 truncate" title="{{ $page->url }}">
-                {{ $index + 1 }}. {{ Str::limit($page->url, 50) }} ({{ $page->visit_count }})
+            @foreach($totalStats['top_pages'] as $index => $page)
+              <div class="text-xs text-gray-600" title="{{ $page->url }}">
+                {{ $index + 1 }}. {{ preg_replace('#^https?://[^/]+#', '', $page->url) }} ({{ $page->visit_count }})
               </div>
             @endforeach
-            @if($totalStats['top_pages']->count() > 3)
-              <div class="text-xs text-gray-500">+{{ $totalStats['top_pages']->count() - 3 }} more</div>
-            @endif
           </div>
         </div>
       </div>
@@ -103,10 +100,10 @@
         <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <a href="{{ request()->fullUrlWithQuery(['sort' => 'url', 'direction' => $sortBy === 'url' && $sortDirection === 'asc' ? 'desc' : 'asc']) }}"
+            <a href="{{ request()->fullUrlWithQuery(['sort' => 'base_url', 'direction' => $sortBy === 'base_url' && $sortDirection === 'asc' ? 'desc' : 'asc']) }}"
                class="hover:text-gray-700">
               URL
-              @if($sortBy === 'url')
+              @if($sortBy === 'base_url')
                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
               @endif
             </a>
@@ -147,8 +144,8 @@
         @forelse($pageViews as $pageView)
           <tr class="hover:bg-gray-50">
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm text-gray-900 max-w-xs truncate" title="{{ $pageView->url }}">
-                {{ $pageView->url }}
+              <div class="text-sm text-gray-900 max-w-xs truncate" title="{{ $pageView->base_url }}">
+                {{ $pageView->base_url }}
               </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -161,7 +158,7 @@
               {{ $pageView->last_visit_at ? \Carbon\Carbon::parse($pageView->last_visit_at)->format('Y-m-d H:i') : 'Never' }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <a href="{{ route('findle.statistics.show', ['url' => $pageView->url]) }}"
+              <a href="{{ route('findle.statistics.show', ['url' => $pageView->base_url]) }}"
                  class="text-blue-600 hover:text-blue-900">
                 View Details
               </a>
