@@ -48,7 +48,7 @@
           <div class="mt-2 space-y-1">
             @foreach($totalStats['top_pages']->take(3) as $index => $page)
               <div class="text-xs text-gray-600 truncate" title="{{ $page->url }}">
-                {{ $index + 1 }}. {{ Str::limit($page->url, 25) }} ({{ $page->visit_count }})
+                {{ $index + 1 }}. {{ Str::limit($page->url, 50) }} ({{ $page->visit_count }})
               </div>
             @endforeach
             @if($totalStats['top_pages']->count() > 3)
