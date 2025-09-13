@@ -40,8 +40,7 @@ class StatisticsController extends Controller
 
         $totalStats = [
             'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->sum('visits_count'),
-            'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)
-                ->select('visitor_hash')->distinct()->count(),
+            'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)->count(),
             'avg_views_per_visit' => $this->calculateAvgViewsPerVisit($sinceDate),
             'top_pages'           => $this->getTopPages($sinceDate, 5),
             'days'                => $days,
@@ -65,8 +64,7 @@ class StatisticsController extends Controller
     private function calculateAvgViewsPerVisit($since)
     {
         $totalVisits = PageView::where('created_at', '>=', $since)->sum('visits_count');
-        $uniqueVisits = PageView::where('created_at', '>=', $since)
-            ->select('visitor_hash')->distinct()->count();
+        $uniqueVisits = PageView::where('created_at', '>=', $since)->count();
 
         return $uniqueVisits > 0 ? round($totalVisits / $uniqueVisits, 2) : 0;
     }

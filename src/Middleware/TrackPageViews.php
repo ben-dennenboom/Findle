@@ -149,6 +149,10 @@ class TrackPageViews
             return $response;
         }
 
+        if (config('findle.tracking_method') === 'javascript') {
+            return $response;
+        }
+
         if (!$request->isMethod('GET')) {
             return $response;
         }
