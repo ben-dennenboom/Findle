@@ -48,17 +48,24 @@ class StatisticsController extends Controller
 
         $dailyStats = $this->getDailyStats($sinceDate);
 
-        return view(
-            'findle::statistics.index',
-            compact(
-                'pageViews',
-                'sortBy',
-                'sortDirection',
-                'search',
-                'totalStats',
-                'dailyStats'
-            )
+        $data = compact(
+            'pageViews',
+            'sortBy',
+            'sortDirection',
+            'search',
+            'totalStats',
+            'dailyStats'
         );
+
+        if ($request->wantsJson() || $request->has('embedded')) {
+            return response()->json($data);
+        }
+
+        if ($request->has('content_only')) {
+            return view('findle::statistics.content', $data);
+        }
+
+        return view('findle::statistics.index', $data);
     }
 
     private function calculateAvgViewsPerVisit($since)
@@ -198,16 +205,23 @@ class StatisticsController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
-        return view(
-            'findle::statistics.show',
-            compact(
-                'url',
-                'pageViewStats',
-                'topOtherPages',
-                'userAgentStats',
-                'queryDataStats',
-                'dailyVisits'
-            )
+        $data = compact(
+            'url',
+            'pageViewStats',
+            'topOtherPages',
+            'userAgentStats',
+            'queryDataStats',
+            'dailyVisits'
         );
+
+        if ($request->wantsJson() || $request->has('embedded')) {
+            return response()->json($data);
+        }
+
+        if ($request->has('content_only')) {
+            return view('findle::statistics.show-content', $data);
+        }
+
+        return view('findle::statistics.show', $data);
     }
 }
