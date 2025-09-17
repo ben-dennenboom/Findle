@@ -7,15 +7,18 @@
   <script src="{{ config('findle.assets.tailwind_css') }}"></script>
   <script src="{{ config('findle.assets.chartjs') }}"></script>
 </head>
-<body class="bg-gray-100">
-<div class="container mx-auto px-4 py-8">
+<body @if(!$headless) class="bg-gray-100" @endif>
+
+<div class="{{ $headless ? '' : 'container mx-auto px-4 py-8' }}">
   <div class="mb-8">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Page Details</h1>
+        @if(!$headless)
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Page Details</h1>
+        @endif
         <p class="text-gray-600 break-all">{{ $url }}</p>
       </div>
-      <a href="{{ route('findle.statistics.index') }}"
+      <a href="{{ route('findle.statistics.index', $headless ? ['headless' => '1'] : []) }}"
          class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
         Back to Overview
       </a>
@@ -163,5 +166,6 @@
     }
   });
 </script>
+
 </body>
 </html>

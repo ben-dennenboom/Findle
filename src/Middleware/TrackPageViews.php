@@ -189,7 +189,7 @@ class TrackPageViews
 
     protected function shouldExcludePath(Request $request): bool
     {
-        $path = '/' . $request->path();
+        $path = '/' . ltrim($request->path(), '/');
         $excludedPaths = config('findle.exclude_routes', []);
 
         foreach ($excludedPaths as $excludedPath) {

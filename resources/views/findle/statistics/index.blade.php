@@ -6,12 +6,15 @@
   <title>Page Statistics - Findle</title>
   <script src="{{ config('findle.assets.tailwind_css') }}"></script>
 </head>
-<body class="bg-gray-100">
-<div class="container mx-auto px-4 py-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">Page View Statistics</h1>
-    <p class="text-gray-600">Track and analyze your website's page views</p>
-  </div>
+<body @if(!$headless) class="bg-gray-100" @endif>
+
+<div class="{{ $headless ? '' : 'container mx-auto px-4 py-8' }}">
+  @if(!$headless)
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Page View Statistics</h1>
+      <p class="text-gray-600">Track and analyze your website's page views</p>
+    </div>
+  @endif
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
@@ -76,6 +79,9 @@
         <form method="GET" class="flex items-center space-x-2">
           <input type="hidden" name="sort" value="{{ $sortBy }}">
           <input type="hidden" name="direction" value="{{ $sortDirection }}">
+          @if($headless)
+            <input type="hidden" name="headless" value="1">
+          @endif
           <input
                   type="text"
                   name="search"
@@ -87,7 +93,7 @@
             Search
           </button>
           @if($search)
-            <a href="{{ route('findle.statistics.index') }}" class="text-gray-500 text-sm hover:text-gray-700">
+            <a href="{{ route('findle.statistics.index', $headless ? ['headless' => '1'] : []) }}" class="text-gray-500 text-sm hover:text-gray-700">
               Clear
             </a>
           @endif
@@ -100,7 +106,7 @@
         <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <a href="{{ request()->fullUrlWithQuery(['sort' => 'base_url', 'direction' => $sortBy === 'base_url' && $sortDirection === 'asc' ? 'desc' : 'asc']) }}"
+            <a href="{{ request()->fullUrlWithQuery(array_merge(['sort' => 'base_url', 'direction' => $sortBy === 'base_url' && $sortDirection === 'asc' ? 'desc' : 'asc'], $headless ? ['headless' => '1'] : [])) }}"
                class="hover:text-gray-700">
               URL
               @if($sortBy === 'base_url')
@@ -109,7 +115,7 @@
             </a>
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <a href="{{ request()->fullUrlWithQuery(['sort' => 'unique_visitors', 'direction' => $sortBy === 'unique_visitors' && $sortDirection === 'asc' ? 'desc' : 'asc']) }}"
+            <a href="{{ request()->fullUrlWithQuery(array_merge(['sort' => 'unique_visitors', 'direction' => $sortBy === 'unique_visitors' && $sortDirection === 'asc' ? 'desc' : 'asc'], $headless ? ['headless' => '1'] : [])) }}"
                class="hover:text-gray-700">
               Unique Visitors
               @if($sortBy === 'unique_visitors')
@@ -118,7 +124,7 @@
             </a>
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <a href="{{ request()->fullUrlWithQuery(['sort' => 'total_visits', 'direction' => $sortBy === 'total_visits' && $sortDirection === 'asc' ? 'desc' : 'asc']) }}"
+            <a href="{{ request()->fullUrlWithQuery(array_merge(['sort' => 'total_visits', 'direction' => $sortBy === 'total_visits' && $sortDirection === 'asc' ? 'desc' : 'asc'], $headless ? ['headless' => '1'] : [])) }}"
                class="hover:text-gray-700">
               Total Visits
               @if($sortBy === 'total_visits')
@@ -127,7 +133,7 @@
             </a>
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            <a href="{{ request()->fullUrlWithQuery(['sort' => 'last_visit_at', 'direction' => $sortBy === 'last_visit_at' && $sortDirection === 'asc' ? 'desc' : 'asc']) }}"
+            <a href="{{ request()->fullUrlWithQuery(array_merge(['sort' => 'last_visit_at', 'direction' => $sortBy === 'last_visit_at' && $sortDirection === 'asc' ? 'desc' : 'asc'], $headless ? ['headless' => '1'] : [])) }}"
                class="hover:text-gray-700">
               Last Visit
               @if($sortBy === 'last_visit_at')
@@ -158,7 +164,7 @@
               {{ $pageView->last_visit_at ? \Carbon\Carbon::parse($pageView->last_visit_at)->format('Y-m-d H:i') : 'Never' }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <a href="{{ route('findle.statistics.show', ['url' => $pageView->base_url]) }}"
+              <a href="{{ route('findle.statistics.show', array_merge(['url' => $pageView->base_url], $headless ? ['headless' => '1'] : [])) }}"
                  class="text-blue-600 hover:text-blue-900">
                 View Details
               </a>
@@ -261,5 +267,6 @@
     });
   });
 </script>
+
 </body>
 </html>
