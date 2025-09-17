@@ -14,6 +14,7 @@ class StatisticsController extends Controller
         $sortBy = $request->get('sort', 'last_visit_at');
         $sortDirection = $request->get('direction', 'desc');
         $search = $request->get('search', '');
+        $headless = $request->get('headless', false);
 
         $query = PageView::selectRaw('SUBSTRING_INDEX(url, "?", 1) as base_url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
@@ -54,7 +55,8 @@ class StatisticsController extends Controller
             'sortDirection',
             'search',
             'totalStats',
-            'dailyStats'
+            'dailyStats',
+            'headless'
         );
 
         if ($request->wantsJson() || $request->has('embedded')) {
@@ -108,6 +110,7 @@ class StatisticsController extends Controller
     public function show(Request $request)
     {
         $url = $request->get('url');
+        $headless = $request->get('headless', false);
 
         if (!$url) {
             return redirect()->route('findle.statistics.index');
@@ -211,7 +214,8 @@ class StatisticsController extends Controller
             'topOtherPages',
             'userAgentStats',
             'queryDataStats',
-            'dailyVisits'
+            'dailyVisits',
+            'headless'
         );
 
         if ($request->wantsJson() || $request->has('embedded')) {
