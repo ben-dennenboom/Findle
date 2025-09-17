@@ -14,6 +14,7 @@ class StatisticsController extends Controller
         $sortBy = $request->get('sort', 'last_visit_at');
         $sortDirection = $request->get('direction', 'desc');
         $search = $request->get('search', '');
+        $headless = $request->get('headless', false);
 
         $query = PageView::selectRaw('SUBSTRING_INDEX(url, "?", 1) as base_url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
@@ -40,8 +41,7 @@ class StatisticsController extends Controller
 
         $totalStats = [
             'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->sum('visits_count'),
-            'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)
-                ->select('visitor_hash')->distinct()->count(),
+            'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)->count(),
             'avg_views_per_visit' => $this->calculateAvgViewsPerVisit($sinceDate),
             'top_pages'           => $this->getTopPages($sinceDate, 5),
             'days'                => $days,
@@ -49,24 +49,31 @@ class StatisticsController extends Controller
 
         $dailyStats = $this->getDailyStats($sinceDate);
 
-        return view(
-            'findle::statistics.index',
-            compact(
-                'pageViews',
-                'sortBy',
-                'sortDirection',
-                'search',
-                'totalStats',
-                'dailyStats'
-            )
+        $data = compact(
+            'pageViews',
+            'sortBy',
+            'sortDirection',
+            'search',
+            'totalStats',
+            'dailyStats',
+            'headless'
         );
+
+        if ($request->wantsJson() || $request->has('embedded')) {
+            return response()->json($data);
+        }
+
+        if ($request->has('content_only')) {
+            return view('findle::statistics.content', $data);
+        }
+
+        return view('findle::statistics.index', $data);
     }
 
     private function calculateAvgViewsPerVisit($since)
     {
         $totalVisits = PageView::where('created_at', '>=', $since)->sum('visits_count');
-        $uniqueVisits = PageView::where('created_at', '>=', $since)
-            ->select('visitor_hash')->distinct()->count();
+        $uniqueVisits = PageView::where('created_at', '>=', $since)->count();
 
         return $uniqueVisits > 0 ? round($totalVisits / $uniqueVisits, 2) : 0;
     }
@@ -103,6 +110,7 @@ class StatisticsController extends Controller
     public function show(Request $request)
     {
         $url = $request->get('url');
+        $headless = $request->get('headless', false);
 
         if (!$url) {
             return redirect()->route('findle.statistics.index');
@@ -200,16 +208,24 @@ class StatisticsController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
-        return view(
-            'findle::statistics.show',
-            compact(
-                'url',
-                'pageViewStats',
-                'topOtherPages',
-                'userAgentStats',
-                'queryDataStats',
-                'dailyVisits'
-            )
+        $data = compact(
+            'url',
+            'pageViewStats',
+            'topOtherPages',
+            'userAgentStats',
+            'queryDataStats',
+            'dailyVisits',
+            'headless'
         );
+
+        if ($request->wantsJson() || $request->has('embedded')) {
+            return response()->json($data);
+        }
+
+        if ($request->has('content_only')) {
+            return view('findle::statistics.show-content', $data);
+        }
+
+        return view('findle::statistics.show', $data);
     }
 }

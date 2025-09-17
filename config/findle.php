@@ -103,4 +103,30 @@ return [
         'tailwind_css' => env('FINDLE_TAILWIND_CSS_URL', 'https://cdn.tailwindcss.com'),
         'chartjs'      => env('FINDLE_CHARTJS_URL', 'https://cdn.jsdelivr.net/npm/chart.js'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | JavaScript Tracking
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for client-side JavaScript tracking to avoid bot traffic.
+    |
+    */
+    'js_tracking' => [
+        'enabled'        => env('FINDLE_JS_TRACKING_ENABLED', false),
+        'token_lifetime' => env('FINDLE_JS_TOKEN_LIFETIME', 300), // 5 minutes
+        'rate_limit'     => env('FINDLE_JS_RATE_LIMIT', 60), // requests per minute per IP
+        'async_load'     => env('FINDLE_JS_ASYNC_LOAD', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tracking Method
+    |--------------------------------------------------------------------------
+    |
+    | Choose between 'middleware' (server-side) or 'javascript' (client-side).
+    | JavaScript tracking is more accurate as it avoids bot traffic.
+    |
+    */
+    'tracking_method' => env('FINDLE_TRACKING_METHOD', 'middleware'),
 ];

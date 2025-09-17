@@ -3,6 +3,7 @@
 namespace Dennenboom\Findle\Providers;
 
 use Dennenboom\Findle\Http\Controllers\StatisticsController;
+use Dennenboom\Findle\Http\Controllers\TrackingApiController;
 use Dennenboom\Findle\Middleware\TrackPageViews;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -42,6 +43,8 @@ class FindleServiceProvider extends ServiceProvider
             'findle-views'
         );
 
+        $this->registerViewComposers();
+
         $this->registerRoutes();
         $this->registerMiddleware();
     }
@@ -60,6 +63,20 @@ class FindleServiceProvider extends ServiceProvider
 
                     Route::get('/show', [StatisticsController::class, 'show'])
                         ->name('findle.statistics.show');
+                }
+            );
+
+            Route::group(
+                [
+                    'prefix'     => 'api/findle',
+                    'middleware' => ['api'],
+                ],
+                function () {
+                    Route::post('/track', [TrackingApiController::class, 'track'])
+                        ->name('findle.api.track');
+
+                    Route::get('/token', [TrackingApiController::class, 'generateToken'])
+                        ->name('findle.api.token');
                 }
             );
         }
@@ -85,5 +102,10 @@ class FindleServiceProvider extends ServiceProvider
 
             return $next($request);
         });
+    }
+
+    protected function registerViewComposers(): void
+    {
+        view()->addNamespace('findle', __DIR__ . '/../../resources/views/findle');
     }
 }
