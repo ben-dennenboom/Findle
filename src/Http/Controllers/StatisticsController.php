@@ -16,7 +16,7 @@ class StatisticsController extends Controller
         $search = $request->get('search', '');
         $headless = $request->get('headless', false);
 
-        $query = PageView::selectRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") as base_url')
+        $query = PageView::selectRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END as base_url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('MAX(created_at) as last_visit_at')
@@ -82,7 +82,7 @@ class StatisticsController extends Controller
     private function getTopPages($since, $limit)
     {
         return PageView::where('created_at', '>=', $since)
-            ->selectRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") as url')
+            ->selectRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END as url')
             ->selectRaw('SUM(visits_count) as visit_count')
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
@@ -139,14 +139,14 @@ class StatisticsController extends Controller
             ->selectRaw('MIN(created_at) as first_visit_at')
             ->first();
 
-        $topOtherPages = PageView::selectRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") as url')
+        $topOtherPages = PageView::selectRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END as url')
             ->selectRaw('SUM(visits_count) as visit_count')
             ->whereIn('visitor_hash', function ($query) use ($url) {
                 $query->select('visitor_hash')
                     ->from(config('findle.table_name', 'page_views'))
                     ->where('url', 'like', $url . '%');
             })
-            ->whereRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") != ?', [$url])
+            ->whereRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END != ?', [$url])
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
             ->limit(10)

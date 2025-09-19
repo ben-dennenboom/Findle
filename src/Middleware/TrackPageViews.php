@@ -161,7 +161,7 @@ class TrackPageViews
             return $response;
         }
 
-        $fullUrl = rtrim($request->fullUrl(), '/');
+        $fullUrl = $this->normalizeUrl($request->fullUrl());
         $userAgent = $request->userAgent() ?? '';
         $referrer = $request->headers->get('referer');
 
@@ -332,6 +332,40 @@ class TrackPageViews
         Cache::put($cacheKey, $requestCount + 1, 60);
 
         return false;
+    }
+
+    protected function normalizeUrl(string $url): string
+    {
+        $parsed = parse_url($url);
+        
+        if (!$parsed || !isset($parsed['scheme']) || !isset($parsed['host'])) {
+            return rtrim($url, '/');
+        }
+        
+        $path = isset($parsed['path']) ? $parsed['path'] : '/';
+        $path = preg_replace('#/+#', '/', $path);
+        
+        if (strlen($path) > 1) {
+            $path = rtrim($path, '/');
+        }
+        
+        $normalizedUrl = $parsed['scheme'] . '://' . $parsed['host'];
+        
+        if (isset($parsed['port'])) {
+            $normalizedUrl .= ':' . $parsed['port'];
+        }
+        
+        $normalizedUrl .= $path;
+        
+        if (isset($parsed['query'])) {
+            $normalizedUrl .= '?' . $parsed['query'];
+        }
+        
+        if (isset($parsed['fragment'])) {
+            $normalizedUrl .= '#' . $parsed['fragment'];
+        }
+        
+        return $normalizedUrl;
     }
 
     protected function generateVisitorHash(Request $request): string

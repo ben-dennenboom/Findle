@@ -30,10 +30,10 @@
       <div class="flex items-center">
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-600">Last 10 Visits</p>
-          <div class="mt-2 space-y-1 max-h-32 overflow-y-auto">
+          <div class="mt-2 space-y-2 max-h-40 overflow-y-auto">
             @foreach($totalStats['last_visits'] as $visit)
-              <div class="text-xs text-gray-600" title="{{ $visit['url'] }}">
-                <div class="font-medium">{{ $visit['page'] }}</div>
+              <div class="text-xs border-l-2 border-blue-200 pl-2" title="{{ $visit['url'] }}">
+                <div class="font-medium text-gray-800 truncate">{{ $visit['page'] ?: '/' }}</div>
                 <div class="text-gray-500">{{ $visit['timestamp'] }}</div>
               </div>
             @endforeach
@@ -57,8 +57,13 @@
           <p class="text-sm font-medium text-gray-600">Top 10 Most Viewed Pages</p>
           <div class="mt-2 space-y-1">
             @foreach($totalStats['top_pages'] as $index => $page)
-              <div class="text-xs text-gray-600" title="{{ $page->url }}">
-                {{ $index + 1 }}. {{ preg_replace('#^https?://[^/]+#', '', $page->url) }} ({{ $page->visit_count }})
+              @php
+                $displayUrl = preg_replace('#^https?://[^/]+#', '', $page->url);
+                $displayUrl = $displayUrl ?: '/';
+              @endphp
+              <div class="text-xs text-gray-600 flex justify-between" title="{{ $page->url }}">
+                <span class="truncate flex-1">{{ $index + 1 }}. {{ $displayUrl }}</span>
+                <span class="font-medium ml-2">({{ $page->visit_count }})</span>
               </div>
             @endforeach
           </div>

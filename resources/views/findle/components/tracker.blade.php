@@ -95,6 +95,23 @@
           xhr.send();
         },
 
+        normalizeUrl: function (url) {
+          try {
+            const urlObj = new URL(url);
+            
+            let path = urlObj.pathname.replace(/\/+/g, '/');
+            
+            if (path.length > 1) {
+              path = path.replace(/\/$/, '');
+            }
+            
+            urlObj.pathname = path;
+            return urlObj.toString();
+          } catch (e) {
+            return url.replace(/\/+/g, '/').replace(/\/$/, '');
+          }
+        },
+
         track: function () {
           if (this.tracked) {
             return;
@@ -108,7 +125,7 @@
             }
 
             const data = {
-              url: window.location.href.replace(/\/$/, ''),
+              url: self.normalizeUrl(window.location.href),
               referrer: document.referrer || null,
               token: token
             };
