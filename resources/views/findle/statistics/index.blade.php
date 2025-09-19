@@ -20,7 +20,7 @@
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Total Visits ({{ $totalStats['days'] }} days)</p>
+          <p class="text-sm font-medium text-gray-600">Total Views ({{ $totalStats['days'] }} days)</p>
           <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_visits']) }}</p>
         </div>
       </div>
@@ -29,8 +29,15 @@
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Total Unique Visits ({{ $totalStats['days'] }} days)</p>
-          <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_unique_visits']) }}</p>
+          <p class="text-sm font-medium text-gray-600">Last 10 Visits</p>
+          <div class="mt-2 space-y-1 max-h-32 overflow-y-auto">
+            @foreach($totalStats['last_visits'] as $visit)
+              <div class="text-xs text-gray-600" title="{{ $visit['url'] }}">
+                <div class="font-medium">{{ $visit['page'] }}</div>
+                <div class="text-gray-500">{{ $visit['timestamp'] }}</div>
+              </div>
+            @endforeach
+          </div>
         </div>
       </div>
     </div>
@@ -47,7 +54,7 @@
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Top 5 Most Viewed Pages</p>
+          <p class="text-sm font-medium text-gray-600">Top 10 Most Viewed Pages</p>
           <div class="mt-2 space-y-1">
             @foreach($totalStats['top_pages'] as $index => $page)
               <div class="text-xs text-gray-600" title="{{ $page->url }}">
@@ -126,7 +133,7 @@
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             <a href="{{ request()->fullUrlWithQuery(array_merge(['sort' => 'total_visits', 'direction' => $sortBy === 'total_visits' && $sortDirection === 'asc' ? 'desc' : 'asc'], $headless ? ['headless' => '1'] : [])) }}"
                class="hover:text-gray-700">
-              Total Visits
+              Total Views
               @if($sortBy === 'total_visits')
                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
               @endif
@@ -214,7 +221,7 @@
         labels: labels,
         datasets: [
           {
-            label: 'Total Visits',
+            label: 'Total Views',
             data: totalVisitsData,
             borderColor: 'rgb(59, 130, 246)',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',

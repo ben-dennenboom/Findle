@@ -108,7 +108,7 @@
             }
 
             const data = {
-              url: window.location.href,
+              url: window.location.href.replace(/\/$/, ''),
               referrer: document.referrer || null,
               token: token
             };

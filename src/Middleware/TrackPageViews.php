@@ -161,7 +161,7 @@ class TrackPageViews
             return $response;
         }
 
-        $fullUrl = $request->fullUrl();
+        $fullUrl = rtrim($request->fullUrl(), '/');
         $userAgent = $request->userAgent() ?? '';
         $referrer = $request->headers->get('referer');
 

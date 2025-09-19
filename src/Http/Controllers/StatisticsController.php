@@ -16,7 +16,7 @@ class StatisticsController extends Controller
         $search = $request->get('search', '');
         $headless = $request->get('headless', false);
 
-        $query = PageView::selectRaw('SUBSTRING_INDEX(url, "?", 1) as base_url')
+        $query = PageView::selectRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") as base_url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
             ->selectRaw('MAX(created_at) as last_visit_at')
@@ -43,7 +43,8 @@ class StatisticsController extends Controller
             'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->sum('visits_count'),
             'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)->count(),
             'avg_views_per_visit' => $this->calculateAvgViewsPerVisit($sinceDate),
-            'top_pages'           => $this->getTopPages($sinceDate, 5),
+            'top_pages'           => $this->getTopPages($sinceDate, 10),
+            'last_visits'         => $this->getLastVisits(10),
             'days'                => $days,
         ];
 
@@ -81,12 +82,27 @@ class StatisticsController extends Controller
     private function getTopPages($since, $limit)
     {
         return PageView::where('created_at', '>=', $since)
-            ->selectRaw('SUBSTRING_INDEX(url, "?", 1) as url')
+            ->selectRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") as url')
             ->selectRaw('SUM(visits_count) as visit_count')
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    private function getLastVisits($limit)
+    {
+        return PageView::select('url', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'url' => $item->url,
+                    'page' => preg_replace('#^https?://[^/]+#', '', $item->url),
+                    'timestamp' => $item->created_at->format('M j, H:i'),
+                ];
+            });
     }
 
     private function getDailyStats($since)
@@ -123,14 +139,14 @@ class StatisticsController extends Controller
             ->selectRaw('MIN(created_at) as first_visit_at')
             ->first();
 
-        $topOtherPages = PageView::selectRaw('SUBSTRING_INDEX(url, "?", 1) as url')
+        $topOtherPages = PageView::selectRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") as url')
             ->selectRaw('SUM(visits_count) as visit_count')
             ->whereIn('visitor_hash', function ($query) use ($url) {
                 $query->select('visitor_hash')
                     ->from(config('findle.table_name', 'page_views'))
                     ->where('url', 'like', $url . '%');
             })
-            ->whereRaw('SUBSTRING_INDEX(url, "?", 1) != ?', [$url])
+            ->whereRaw('RTRIM(SUBSTRING_INDEX(url, "?", 1), "/") != ?', [$url])
             ->groupBy('url')
             ->orderBy('visit_count', 'desc')
             ->limit(10)
