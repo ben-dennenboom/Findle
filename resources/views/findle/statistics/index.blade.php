@@ -16,50 +16,44 @@
     </div>
   @endif
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-2">
-          <p class="text-sm font-medium text-gray-600">Total Views ({{ $totalStats['days'] }} days)</p>
-          <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_visits']) }}</p>
-          <p class="text-sm font-medium text-gray-600 mt-20">Avg Views Per Visit ({{ $totalStats['days'] }} days)</p>
-          <p class="text-2xl font-bold text-gray-900">{{ $totalStats['avg_views_per_visit'] }}</p>
+  <div class="flex flex-wrap gap-6 mb-8">
+    <div class="flex-none w-full sm:w-2/12 bg-white rounded-lg shadow p-6 flex flex-col justify-between min-h-[200px]">
+      <div class="flex-1">
+        <p class="text-sm font-medium text-gray-600 break-words">Total Views ({{ $totalStats['days'] }} days)</p>
+        <p class="text-2xl font-bold text-gray-900 break-words">{{ number_format($totalStats['total_visits']) }}</p>
+        <p class="text-sm font-medium text-gray-600 mt-10 break-words">Avg Views Per Visit ({{ $totalStats['days'] }} days)</p>
+        <p class="text-2xl font-bold text-gray-900 break-words">{{ $totalStats['avg_views_per_visit'] }}</p>
+      </div>
+    </div>
+
+    <div class="flex-none w-full sm:w-5/12 bg-white rounded-lg shadow p-6 flex flex-col justify-between min-h-[200px]">
+      <div class="flex-1">
+        <p class="text-sm font-medium text-gray-600 break-words">Last 10 Visits</p>
+        <div class="mt-2 space-y-2 max-h-40 overflow-y-auto">
+          @foreach($totalStats['last_visits'] as $visit)
+            <div class="text-xs border-l-2 border-blue-200 pl-2" title="{{ $visit['url'] }}">
+              <div class="font-medium text-gray-800 break-words">{{ $visit['page'] ?: '/' }}</div>
+              <div class="text-gray-500 break-words">{{ $visit['timestamp'] }}</div>
+            </div>
+          @endforeach
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Last 10 Visits</p>
-          <div class="mt-2 space-y-2 max-h-40">
-            @foreach($totalStats['last_visits'] as $visit)
-              <div class="text-xs border-l-2 border-blue-200 pl-2" title="{{ $visit['url'] }}">
-                <div class="font-medium text-gray-800 truncate">{{ $visit['page'] ?: '/' }}</div>
-                <div class="text-gray-500">{{ $visit['timestamp'] }}</div>
-              </div>
-            @endforeach
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Top 10 Most Viewed Pages</p>
-          <div class="mt-2 space-y-1">
-            @foreach($totalStats['top_pages'] as $index => $page)
-              @php
-                $displayUrl = preg_replace('#^https?://[^/]+#', '', $page->url);
-                $displayUrl = $displayUrl ?: '/';
-              @endphp
-              <div class="text-xs text-gray-600 flex justify-between" title="{{ $page->url }}">
-                <span class="truncate flex-1">{{ $index + 1 }}. {{ $displayUrl }}</span>
-                <span class="font-medium ml-2">({{ $page->visit_count }})</span>
-              </div>
-            @endforeach
-          </div>
+    <div class="flex-none w-full sm:w-5/12 bg-white rounded-lg shadow p-6 flex flex-col justify-between min-h-[200px]">
+      <div class="flex-1">
+        <p class="text-sm font-medium text-gray-600 break-words">Top 10 Most Viewed Pages</p>
+        <div class="mt-2 space-y-1 overflow-y-auto max-h-40">
+          @foreach($totalStats['top_pages'] as $index => $page)
+            @php
+              $displayUrl = preg_replace('#^https?://[^/]+#', '', $page->url);
+              $displayUrl = $displayUrl ?: '/';
+            @endphp
+            <div class="text-xs text-gray-600 flex justify-between" title="{{ $page->url }}">
+              <span class="break-words flex-1 mr-2">{{ $index + 1 }}. {{ $displayUrl }}</span>
+              <span class="font-medium flex-shrink-0">({{ $page->visit_count }})</span>
+            </div>
+          @endforeach
         </div>
       </div>
     </div>
