@@ -19,9 +19,11 @@
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-center">
-        <div class="flex-1">
+        <div class="flex-2">
           <p class="text-sm font-medium text-gray-600">Total Views ({{ $totalStats['days'] }} days)</p>
           <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_visits']) }}</p>
+          <p class="text-sm font-medium text-gray-600 mt-20">Avg Views Per Visit ({{ $totalStats['days'] }} days)</p>
+          <p class="text-2xl font-bold text-gray-900">{{ $totalStats['avg_views_per_visit'] }}</p>
         </div>
       </div>
     </div>
@@ -30,7 +32,7 @@
       <div class="flex items-center">
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-600">Last 10 Visits</p>
-          <div class="mt-2 space-y-2 max-h-40 overflow-y-auto">
+          <div class="mt-2 space-y-2 max-h-40">
             @foreach($totalStats['last_visits'] as $visit)
               <div class="text-xs border-l-2 border-blue-200 pl-2" title="{{ $visit['url'] }}">
                 <div class="font-medium text-gray-800 truncate">{{ $visit['page'] ?: '/' }}</div>
@@ -38,15 +40,6 @@
               </div>
             @endforeach
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-1">
-          <p class="text-sm font-medium text-gray-600">Avg Views Per Visit ({{ $totalStats['days'] }} days)</p>
-          <p class="text-2xl font-bold text-gray-900">{{ $totalStats['avg_views_per_visit'] }}</p>
         </div>
       </div>
     </div>
