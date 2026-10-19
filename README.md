@@ -123,6 +123,21 @@ The parameters can be changed via the `reference_parameters` config option. When
 
 By default, only users with an `is_admin` method that returns `true` can access the statistics. You can customize this by modifying the `middleware_check` function in the configuration.
 
+### Comparing Pages
+
+Select two or more pages with the checkboxes on the statistics overview, or use the "Compare" button on a page's details, to compare up to 8 pages. The comparison shows the daily views of each page in one graph, together with the total views, the last view and the top 5 other pages visited per page.
+
+## Upgrading
+
+Publish and run the migrations again after updating:
+
+```bash
+php artisan vendor:publish --tag=findle-migrations
+php artisan migrate
+```
+
+Every visit is now stored in its own row (`page_view_visits`), so the daily graphs show repeat visits on the day they happened. For page views recorded before this update only the first and last visit are known, the visits in between are spread evenly over that period.
+
 ## Environment Variables
 
 ```env
@@ -132,6 +147,7 @@ FINDLE_BOT_DETECTION=true
 FINDLE_RATE_LIMIT=30
 FINDLE_DATA_RETENTION_DAYS=365
 FINDLE_TABLE_NAME=page_views
+FINDLE_VISITS_TABLE_NAME=page_view_visits
 
 # CDN Assets (optional)
 FINDLE_TAILWIND_CSS_URL=https://cdn.tailwindcss.com

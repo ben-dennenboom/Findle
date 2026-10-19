@@ -45,12 +45,14 @@ class TrackingApiController extends Controller
 
             $hash = $this->generateVisitorHash($request);
 
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $queryData);
+
             PageView::recordView(
                 $url,
                 $hash,
                 $request->userAgent(),
                 $referrer,
-                $request->query->all()
+                $queryData
             );
 
             $this->invalidateToken($token);

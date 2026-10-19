@@ -107,7 +107,19 @@
   <div class="bg-white rounded-lg shadow">
     <div class="px-6 py-4 border-b border-gray-200">
       <div class="flex justify-between items-center">
-        <h2 class="text-lg font-medium text-gray-900">Page Views</h2>
+        <div class="flex items-center space-x-4">
+          <h2 class="text-lg font-medium text-gray-900">Page Views</h2>
+
+          <form id="findle-compare-form" method="GET" action="{{ route('findle.statistics.compare') }}">
+            @if($headless)
+              <input type="hidden" name="headless" value="1">
+            @endif
+            <button type="submit" id="findle-compare-button" disabled
+                    class="bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+              Compare selected
+            </button>
+          </form>
+        </div>
 
         <form method="GET" class="flex items-center space-x-2">
           <input type="hidden" name="sort" value="{{ $sortBy }}">
@@ -138,6 +150,9 @@
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
         <tr>
+          <th class="pl-6 py-3 w-4">
+            <span class="sr-only">Compare</span>
+          </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             <a href="{{ request()->fullUrlWithQuery(array_merge(['sort' => 'base_url', 'direction' => $sortBy === 'base_url' && $sortDirection === 'asc' ? 'desc' : 'asc'], $headless ? ['headless' => '1'] : [])) }}"
                class="hover:text-gray-700">
@@ -182,6 +197,10 @@
         <tbody class="bg-white divide-y divide-gray-200">
         @forelse($pageViews as $pageView)
           <tr class="hover:bg-gray-50">
+            <td class="pl-6 py-4">
+              <input type="checkbox" name="urls[]" value="{{ $pageView->base_url }}" form="findle-compare-form"
+                     class="findle-compare-checkbox rounded border-gray-300" aria-label="Compare {{ $pageView->base_url }}">
+            </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="text-sm text-gray-900 max-w-xs truncate" title="{{ $pageView->base_url }}">
                 {{ $pageView->base_url }}
@@ -205,7 +224,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+            <td colspan="6" class="px-6 py-4 text-center text-gray-500">
               @if($search)
                 No page views found matching "{{ $search }}"
               @else
@@ -225,6 +244,28 @@
     @endif
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const maxPages = {{ \Dennenboom\Findle\Http\Controllers\ComparisonsController::MAX_PAGES }};
+    const checkboxes = Array.from(document.querySelectorAll('.findle-compare-checkbox'));
+    const compareButton = document.getElementById('findle-compare-button');
+
+    const updateCompareState = function () {
+      const selectedCount = checkboxes.filter(checkbox => checkbox.checked).length;
+
+      compareButton.disabled = selectedCount < 2;
+      compareButton.textContent = selectedCount > 0 ? `Compare selected (${selectedCount})` : 'Compare selected';
+
+      checkboxes.forEach(function (checkbox) {
+        checkbox.disabled = !checkbox.checked && selectedCount >= maxPages;
+      });
+    };
+
+    checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateCompareState));
+    updateCompareState();
+  });
+</script>
 
 <script src="{{ config('findle.assets.chartjs') }}"></script>
 <script>

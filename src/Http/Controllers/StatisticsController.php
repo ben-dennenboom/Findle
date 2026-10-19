@@ -2,25 +2,27 @@
 
 namespace Dennenboom\Findle\Http\Controllers;
 
+use Carbon\CarbonInterface;
 use Dennenboom\Findle\Models\PageView;
+use Dennenboom\Findle\Models\PageViewVisit;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection as BaseCollection;
 
 class StatisticsController extends Controller
 {
     public function index(Request $request)
     {
         $sortBy = $request->get('sort', 'last_visit_at');
-        $sortDirection = $request->get('direction', 'desc');
+        $sortDirection = $request->get('direction') === 'asc' ? 'asc' : 'desc';
         $search = $request->get('search', '');
         $headless = $request->get('headless', false);
 
-        $query = PageView::selectRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END as base_url')
+        $query = PageView::select('base_url')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
-            ->selectRaw('MAX(created_at) as last_visit_at')
+            ->selectRaw('MAX(updated_at) as last_visit_at')
             ->groupBy('base_url');
 
         if ($search) {
@@ -37,19 +39,22 @@ class StatisticsController extends Controller
         $pageViews = $query->paginate(25);
         $pageViews->appends($request->query());
 
-        $days = $request->get('days', 90);
+        $days = (int) $request->get('days', 90);
         $sinceDate = now()->subDays($days);
 
+        $totalVisits = PageViewVisit::since($sinceDate)->count();
+        $totalUniqueVisits = PageViewVisit::since($sinceDate)->distinct()->count('page_view_id');
+
         $totalStats = [
-            'total_visits'        => PageView::where('created_at', '>=', $sinceDate)->sum('visits_count'),
-            'total_unique_visits' => PageView::where('created_at', '>=', $sinceDate)->count(),
-            'avg_views_per_visit' => $this->calculateAvgViewsPerVisit($sinceDate),
+            'total_visits'        => $totalVisits,
+            'total_unique_visits' => $totalUniqueVisits,
+            'avg_views_per_visit' => $totalUniqueVisits > 0 ? round($totalVisits / $totalUniqueVisits, 2) : 0,
             'top_pages'           => $this->getTopPages($sinceDate, 10),
             'last_visits'         => $this->getLastVisits(10),
             'days'                => $days,
         ];
 
-        $dailyStats = $this->getDailyStats($sinceDate);
+        $dailyStats = PageViewVisit::dailyStats($sinceDate);
 
         $references = $this->getReferences();
 
@@ -68,70 +73,48 @@ class StatisticsController extends Controller
             return response()->json($data);
         }
 
-        if ($request->has('content_only')) {
-            return view('findle::statistics.content', $data);
-        }
-
         return view('findle::statistics.index', $data);
     }
 
-    private function calculateAvgViewsPerVisit($since)
+    /** @return BaseCollection<int, object> */
+    private function getTopPages(CarbonInterface $since, int $limit): BaseCollection
     {
-        $totalVisits = PageView::where('created_at', '>=', $since)->sum('visits_count');
-        $uniqueVisits = PageView::where('created_at', '>=', $since)->count();
+        $pageViewsTable = PageView::tableName();
 
-        return $uniqueVisits > 0 ? round($totalVisits / $uniqueVisits, 2) : 0;
-    }
-
-    private function getTopPages($since, $limit)
-    {
-        return PageView::where('created_at', '>=', $since)
-            ->selectRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END as url')
-            ->selectRaw('SUM(visits_count) as visit_count')
-            ->groupBy('url')
+        return PageViewVisit::joinPageViews()
+            ->since($since)
+            ->selectRaw("{$pageViewsTable}.base_url as url")
+            ->selectRaw('COUNT(*) as visit_count')
+            ->groupBy("{$pageViewsTable}.base_url")
             ->orderBy('visit_count', 'desc')
             ->limit($limit)
+            ->toBase()
             ->get();
     }
 
-    private function getLastVisits($limit)
+    private function getLastVisits(int $limit): BaseCollection
     {
-        return PageView::select('url', 'created_at')
-            ->orderBy('created_at', 'desc')
+        $pageViewsTable = PageView::tableName();
+        $visitsTable = PageViewVisit::tableName();
+
+        return PageViewVisit::joinPageViews()
+            ->select("{$pageViewsTable}.url", "{$visitsTable}.visited_at")
+            ->orderBy("{$visitsTable}.visited_at", 'desc')
+            ->orderBy("{$visitsTable}.id", 'desc')
             ->limit($limit)
             ->get()
-            ->map(function ($item) {
-                return [
-                    'url' => $item->url,
-                    'page' => preg_replace('#^https?://[^/]+#', '', $item->url),
-                    'timestamp' => $item->created_at->format('M j, H:i'),
-                ];
-            });
-    }
-
-    private function getDailyStats($since)
-    {
-        return PageView::where('created_at', '>=', $since)
-            ->selectRaw('DATE(created_at) as date')
-            ->selectRaw('SUM(visits_count) as total_visits')
-            ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visits')
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'date'          => $item->date,
-                    'total_visits'  => $item->total_visits,
-                    'unique_visits' => $item->unique_visits,
-                ];
-            });
+            ->map(fn (PageViewVisit $visit) => [
+                'url'       => $visit->url,
+                'page'      => preg_replace('#^https?://[^/]+#', '', $visit->url),
+                'timestamp' => $visit->visited_at->format('M j, H:i'),
+            ]);
     }
 
     /** @return Collection<int, PageView> */
     private function getReferences(?string $url = null): Collection
     {
         return PageView::whereNotNull('reference')
-            ->when($url, fn ($query) => $query->where('url', 'like', "{$url}%"))
+            ->when($url, fn ($query) => $query->forBaseUrl($url))
             ->select('reference')
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
@@ -146,31 +129,22 @@ class StatisticsController extends Controller
         $url = $request->get('url');
         $headless = $request->get('headless', false);
 
-        if (!$url) {
+        if (! is_string($url) || $url === '') {
             return redirect()->route('findle.statistics.index');
         }
 
-        $pageViewStats = PageView::where('url', 'like', $url . '%')
+        $url = PageView::normalizeBaseUrl($url);
+
+        $pageViewStats = PageView::forBaseUrl($url)
             ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
             ->selectRaw('SUM(visits_count) as total_visits')
-            ->selectRaw('MAX(created_at) as last_visit_at')
+            ->selectRaw('MAX(updated_at) as last_visit_at')
             ->selectRaw('MIN(created_at) as first_visit_at')
             ->first();
 
-        $topOtherPages = PageView::selectRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END as url')
-            ->selectRaw('SUM(visits_count) as visit_count')
-            ->whereIn('visitor_hash', function ($query) use ($url) {
-                $query->select('visitor_hash')
-                    ->from(config('findle.table_name', 'page_views'))
-                    ->where('url', 'like', $url . '%');
-            })
-            ->whereRaw('CASE WHEN SUBSTRING_INDEX(url, "?", 1) LIKE "%/" THEN LEFT(SUBSTRING_INDEX(url, "?", 1), LENGTH(SUBSTRING_INDEX(url, "?", 1)) - 1) ELSE SUBSTRING_INDEX(url, "?", 1) END != ?', [$url])
-            ->groupBy('url')
-            ->orderBy('visit_count', 'desc')
-            ->limit(10)
-            ->get();
+        $topOtherPages = PageViewVisit::topOtherPages($url, 10);
 
-        $userAgentStats = PageView::where('url', 'like', $url . '%')
+        $userAgentStats = PageView::forBaseUrl($url)
             ->selectRaw('user_agent')
             ->selectRaw('SUM(visits_count) as count')
             ->whereNotNull('user_agent')
@@ -203,7 +177,8 @@ class StatisticsController extends Controller
                 return $group->sum('count');
             });
 
-        $queryDataStats = PageView::where('url', 'like', $url . '?%')
+        $queryDataStats = PageView::forBaseUrl($url)
+            ->where('url', 'like', '%?%')
             ->whereNotNull('query_data')
             ->where('query_data', '!=', '[]')
             ->get()
@@ -233,14 +208,14 @@ class StatisticsController extends Controller
             ->sortDesc()
             ->take(10);
 
-        $dailyVisits = PageView::where('url', 'like', $url . '%')
-            ->selectRaw('DATE(created_at) as date')
-            ->selectRaw('SUM(visits_count) as visits')
-            ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visits')
-            ->where('created_at', '>=', now()->subDays(30))
-            ->groupBy('date')
-            ->orderBy('date', 'desc')
-            ->get();
+        $dailyVisits = PageViewVisit::dailyStats(now()->subDays(30), $url)
+            ->map(fn (array $day) => [
+                'date'          => $day['date'],
+                'visits'        => $day['total_visits'],
+                'unique_visits' => $day['unique_visits'],
+            ])
+            ->reverse()
+            ->values();
 
         $references = $this->getReferences($url);
 
@@ -257,10 +232,6 @@ class StatisticsController extends Controller
 
         if ($request->wantsJson() || $request->has('embedded')) {
             return response()->json($data);
-        }
-
-        if ($request->has('content_only')) {
-            return view('findle::statistics.show-content', $data);
         }
 
         return view('findle::statistics.show', $data);

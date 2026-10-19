@@ -18,10 +18,16 @@
         @endif
         <p class="text-gray-600 break-all">{{ $url }}</p>
       </div>
-      <a href="{{ route('findle.statistics.index', $headless ? ['headless' => '1'] : []) }}"
-         class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
-        Back to Overview
-      </a>
+      <div class="flex items-center space-x-2">
+        <a href="{{ route('findle.statistics.compare', array_merge(['urls' => [$url]], $headless ? ['headless' => '1'] : [])) }}"
+           class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+          Compare
+        </a>
+        <a href="{{ route('findle.statistics.index', $headless ? ['headless' => '1'] : []) }}"
+           class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
+          Back to Overview
+        </a>
+      </div>
     </div>
   </div>
 

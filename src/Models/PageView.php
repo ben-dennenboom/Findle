@@ -2,10 +2,13 @@
 
 namespace Dennenboom\Findle\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PageView extends Model
 {
@@ -13,6 +16,7 @@ class PageView extends Model
 
     protected $fillable = [
         'url',
+        'base_url',
         'visitor_hash',
         'user_agent',
         'referrer',
@@ -29,7 +33,31 @@ class PageView extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setTable(config('findle.table_name', 'page_views'));
+        $this->setTable(static::tableName());
+    }
+
+    public static function tableName(): string
+    {
+        return config('findle.table_name', 'page_views');
+    }
+
+    public static function normalizeBaseUrl(string $url): string
+    {
+        $baseUrl = preg_split('/[?#]/', $url, 2)[0];
+
+        return str_ends_with($baseUrl, '/') ?
+            substr($baseUrl, 0, -1) :
+            $baseUrl;
+    }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(PageViewVisit::class);
+    }
+
+    public function scopeForBaseUrl(Builder $query, string $url): Builder
+    {
+        return $query->where('base_url', static::normalizeBaseUrl($url));
     }
 
     public static function recordView(
@@ -48,32 +76,35 @@ class PageView extends Model
             
             Cache::put($rateLimitKey, true, 10);
             
-            $existingRecord = static::where('url', $url)
-                ->where('visitor_hash', $visitorHash)
-                ->first();
+            DB::transaction(function () use ($url, $visitorHash, $userAgent, $referrer, $queryData) {
+                $pageView = static::where('url', $url)
+                    ->where('visitor_hash', $visitorHash)
+                    ->first();
 
-            if ($existingRecord) {
-                $existingRecord->increment('visits_count');
-                
-                $mergedQueryData = static::mergeQueryData($existingRecord->query_data ?? [], $queryData);
-                
-                $existingRecord->update([
-                    'user_agent' => $userAgent,
-                    'referrer'   => $referrer,
-                    'query_data' => $mergedQueryData,
-                    'updated_at' => now(),
-                ]);
-            } else {
-                static::create([
-                    'url'          => $url,
-                    'visitor_hash' => $visitorHash,
-                    'user_agent'   => $userAgent,
-                    'referrer'     => $referrer,
-                    'query_data'   => $queryData,
-                    'visits_count' => 1,
-                    'reference'    => static::extractReference($url),
-                ]);
-            }
+                if ($pageView) {
+                    $pageView->increment('visits_count');
+
+                    $pageView->update([
+                        'user_agent' => $userAgent,
+                        'referrer'   => $referrer,
+                        'query_data' => static::mergeQueryData($pageView->query_data ?? [], $queryData),
+                        'updated_at' => now(),
+                    ]);
+                } else {
+                    $pageView = static::create([
+                        'url'          => $url,
+                        'base_url'     => static::normalizeBaseUrl($url),
+                        'visitor_hash' => $visitorHash,
+                        'user_agent'   => $userAgent,
+                        'referrer'     => $referrer,
+                        'query_data'   => $queryData,
+                        'visits_count' => 1,
+                        'reference'    => static::extractReference($url),
+                    ]);
+                }
+
+                $pageView->visits()->create(['visited_at' => now()]);
+            });
 
             return true;
         } catch (\Exception $e) {
