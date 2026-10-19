@@ -11,7 +11,8 @@
         config: {
           tokenEndpoint: '{{ route('findle.api.token') }}',
           trackEndpoint: '{{ route('findle.api.track') }}',
-          async: {{ config('findle.js_tracking.async_load', true) ? 'true' : 'false' }}
+          async: {{ config('findle.js_tracking.async_load', true) ? 'true' : 'false' }},
+          requireInteraction: {{ config('findle.js_tracking.require_interaction', true) ? 'true' : 'false' }}
         },
 
         token: null,
@@ -22,11 +23,62 @@
             return;
           }
 
-          if (this.config.async) {
-            this.loadAsync();
-          } else {
-            this.track();
+          const self = this;
+
+          this.whenVisible(function () {
+            if (self.config.requireInteraction) {
+              self.onFirstInteraction(function () {
+                self.track();
+              });
+
+              return;
+            }
+
+            if (self.config.async) {
+              self.loadAsync();
+            } else {
+              self.track();
+            }
+          });
+        },
+
+        whenVisible: function (callback) {
+          if (document.visibilityState !== 'hidden') {
+            callback();
+            return;
           }
+
+          const onVisibilityChange = function () {
+            if (document.visibilityState === 'hidden') {
+              return;
+            }
+
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            callback();
+          };
+
+          document.addEventListener('visibilitychange', onVisibilityChange);
+        },
+
+        onFirstInteraction: function (callback) {
+          // Scroll is left out on purpose: the browser's scroll restoration fires it without any user input.
+          const events = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel'];
+
+          const onInteraction = function (event) {
+            if (!event.isTrusted) {
+              return;
+            }
+
+            events.forEach(function (eventName) {
+              window.removeEventListener(eventName, onInteraction, true);
+            });
+
+            callback();
+          };
+
+          events.forEach(function (eventName) {
+            window.addEventListener(eventName, onInteraction, {capture: true, passive: true});
+          });
         },
 
         isBot: function () {
@@ -35,8 +87,21 @@
             'bot', 'spider', 'crawl', 'slurp', 'scraper', 'scanner',
             'checker', 'monitor', 'validator', 'fetcher', 'collector',
             'gatherer', 'extractor', 'indexer', 'parser', 'googlebot',
-            'bingbot', 'yandexbot', 'baiduspider', 'duckduckbot'
+            'bingbot', 'yandexbot', 'baiduspider', 'duckduckbot', 'headless',
+            'lighthouse', 'preview', 'prerender'
           ];
+
+          if (navigator.webdriver) {
+            return true;
+          }
+
+          if (window.callPhantom || window._phantom || window.__nightmare) {
+            return true;
+          }
+
+          if (!navigator.languages || navigator.languages.length === 0) {
+            return true;
+          }
 
           for (let i = 0; i < botPatterns.length; i++) {
             if (userAgent.indexOf(botPatterns[i]) !== -1) {

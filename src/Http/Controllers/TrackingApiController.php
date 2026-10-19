@@ -3,6 +3,7 @@
 namespace Dennenboom\Findle\Http\Controllers;
 
 use Dennenboom\Findle\Models\PageView;
+use Dennenboom\Findle\Support\BotDetector;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
@@ -32,6 +33,10 @@ class TrackingApiController extends Controller
 
             if ($this->shouldExcludePath($url)) {
                 return response()->json(['success' => true, 'message' => 'Path excluded']);
+            }
+
+            if (config('findle.bot_detection', true) && BotDetector::isBot($request->userAgent(), $request)) {
+                return response()->json(['success' => true, 'message' => 'Bot detected']);
             }
 
             if ($this->isRapidRequest($request)) {

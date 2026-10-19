@@ -113,10 +113,11 @@ return [
     |
     */
     'js_tracking' => [
-        'enabled'        => env('FINDLE_JS_TRACKING_ENABLED', false),
-        'token_lifetime' => env('FINDLE_JS_TOKEN_LIFETIME', 300), // 5 minutes
-        'rate_limit'     => env('FINDLE_JS_RATE_LIMIT', 60), // requests per minute per IP
-        'async_load'     => env('FINDLE_JS_ASYNC_LOAD', true),
+        'enabled'             => env('FINDLE_JS_TRACKING_ENABLED', false),
+        'token_lifetime'      => env('FINDLE_JS_TOKEN_LIFETIME', 300), // 5 minutes
+        'rate_limit'          => env('FINDLE_JS_RATE_LIMIT', 60), // requests per minute per IP
+        'async_load'          => env('FINDLE_JS_ASYNC_LOAD', true),
+        'require_interaction' => env('FINDLE_JS_REQUIRE_INTERACTION', true), // only count visitors that use mouse, touch or keyboard
     ],
 
     /*
