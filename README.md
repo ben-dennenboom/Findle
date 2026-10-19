@@ -11,6 +11,11 @@ Findle is a GDPR-friendly page view tracking and analytics package for Laravel a
 - 🛡️ **Security Focused**: Configurable authorization and excluded routes
 - 🎨 **Responsive UI**: Mobile-friendly statistics interface
 
+## Requirements
+
+- PHP 8.0 or higher (tested up to PHP 8.5)
+- Laravel 9, 10, 11, 12 or 13
+
 ## Installation
 
 1. Install the package via Composer:

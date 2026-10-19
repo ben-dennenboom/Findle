@@ -201,7 +201,7 @@ class TrackPageViews
         return false;
     }
 
-    protected function isBot(string $userAgent, Request $request = null): bool
+    protected function isBot(string $userAgent, ?Request $request = null): bool
     {
         if (empty($userAgent)) {
             return true;
