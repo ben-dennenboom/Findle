@@ -18,6 +18,7 @@ class PageView extends Model
         'referrer',
         'query_data',
         'visits_count',
+        'reference',
     ];
 
     protected $casts = [
@@ -70,6 +71,7 @@ class PageView extends Model
                     'referrer'     => $referrer,
                     'query_data'   => $queryData,
                     'visits_count' => 1,
+                    'reference'    => static::extractReference($url),
                 ]);
             }
 
@@ -79,6 +81,29 @@ class PageView extends Model
 
             return false;
         }
+    }
+
+    public static function extractReference(string $url): ?string
+    {
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $queryParameters);
+
+        foreach (config('findle.reference_parameters', ['ref', 'utm_ref']) as $parameter) {
+            $reference = $queryParameters[$parameter] ?? null;
+
+            if (! is_string($reference)) {
+                continue;
+            }
+
+            $reference = trim($reference);
+
+            if ($reference === '') {
+                continue;
+            }
+
+            return mb_substr($reference, 0, 255);
+        }
+
+        return null;
     }
 
     private static function mergeQueryData(array $existing, array $new): array

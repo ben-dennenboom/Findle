@@ -3,6 +3,7 @@
 namespace Dennenboom\Findle\Http\Controllers;
 
 use Dennenboom\Findle\Models\PageView;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +51,8 @@ class StatisticsController extends Controller
 
         $dailyStats = $this->getDailyStats($sinceDate);
 
+        $references = $this->getReferences();
+
         $data = compact(
             'pageViews',
             'sortBy',
@@ -57,6 +60,7 @@ class StatisticsController extends Controller
             'search',
             'totalStats',
             'dailyStats',
+            'references',
             'headless'
         );
 
@@ -121,6 +125,20 @@ class StatisticsController extends Controller
                     'unique_visits' => $item->unique_visits,
                 ];
             });
+    }
+
+    /** @return Collection<int, PageView> */
+    private function getReferences(?string $url = null): Collection
+    {
+        return PageView::whereNotNull('reference')
+            ->when($url, fn ($query) => $query->where('url', 'like', "{$url}%"))
+            ->select('reference')
+            ->selectRaw('COUNT(DISTINCT visitor_hash) as unique_visitors')
+            ->selectRaw('SUM(visits_count) as total_visits')
+            ->selectRaw('MAX(updated_at) as last_visit_at')
+            ->groupBy('reference')
+            ->orderBy('total_visits', 'desc')
+            ->get();
     }
 
     public function show(Request $request)
@@ -224,6 +242,8 @@ class StatisticsController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
+        $references = $this->getReferences($url);
+
         $data = compact(
             'url',
             'pageViewStats',
@@ -231,6 +251,7 @@ class StatisticsController extends Controller
             'userAgentStats',
             'queryDataStats',
             'dailyVisits',
+            'references',
             'headless'
         );
 

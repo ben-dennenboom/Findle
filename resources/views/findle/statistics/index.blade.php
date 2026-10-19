@@ -70,6 +70,40 @@
     </div>
   </div>
 
+  <div class="bg-white rounded-lg shadow mb-8">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-medium text-gray-900">References</h2>
+      <p class="text-sm text-gray-500">Visits through <span class="font-mono">{{ collect(config('findle.reference_parameters', ['ref', 'utm_ref']))->map(fn ($parameter) => "?{$parameter}=")->join(', ') }}</span></p>
+    </div>
+
+    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Visitors</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Views</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
+        </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+        @forelse($references as $reference)
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">{{ $reference->reference }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($reference->unique_visitors) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($reference->total_visits) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $reference->last_visit_at ? \Carbon\Carbon::parse($reference->last_visit_at)->format('Y-m-d H:i') : 'Never' }}</td>
+          </tr>
+        @empty
+          <tr>
+            <td colspan="4" class="px-6 py-4 text-center text-gray-500">No references recorded yet</td>
+          </tr>
+        @endforelse
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="bg-white rounded-lg shadow">
     <div class="px-6 py-4 border-b border-gray-200">
       <div class="flex justify-between items-center">

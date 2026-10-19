@@ -113,6 +113,12 @@ The statistics page includes:
 - Sortable and searchable page list
 - Detailed page analytics with charts
 
+### References
+
+Visits to URLs containing `?ref=` or `?utm_ref=` (e.g. `https://example.com/blog?ref=newsletter`) are stored with their reference. The statistics overview shows the visit counts per reference across the whole site, and the page details show the references for that page.
+
+The parameters can be changed via the `reference_parameters` config option. When upgrading, publish and run the migrations again to add the `reference` column; existing page views are backfilled.
+
 ### Authorization
 
 By default, only users with an `is_admin` method that returns `true` can access the statistics. You can customize this by modifying the `middleware_check` function in the configuration.

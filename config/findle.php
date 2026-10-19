@@ -129,4 +129,15 @@ return [
     |
     */
     'tracking_method' => env('FINDLE_TRACKING_METHOD', 'middleware'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reference Parameters
+    |--------------------------------------------------------------------------
+    |
+    | Query parameters that identify where a visitor came from, e.g. ?ref=newsletter.
+    | The first parameter found in the URL is stored as the reference.
+    |
+    */
+    'reference_parameters' => ['ref', 'utm_ref'],
 ];
