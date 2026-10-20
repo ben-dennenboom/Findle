@@ -2,6 +2,7 @@
 
 namespace Dennenboom\Findle\Providers;
 
+use Dennenboom\Findle\Http\Controllers\ComparisonsController;
 use Dennenboom\Findle\Http\Controllers\StatisticsController;
 use Dennenboom\Findle\Http\Controllers\TrackingApiController;
 use Dennenboom\Findle\Middleware\TrackPageViews;
@@ -63,6 +64,9 @@ class FindleServiceProvider extends ServiceProvider
 
                     Route::get('/show', [StatisticsController::class, 'show'])
                         ->name('findle.statistics.show');
+
+                    Route::get('/compare', [ComparisonsController::class, 'index'])
+                        ->name('findle.statistics.compare');
                 }
             );
 

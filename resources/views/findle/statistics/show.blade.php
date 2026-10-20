@@ -18,10 +18,16 @@
         @endif
         <p class="text-gray-600 break-all">{{ $url }}</p>
       </div>
-      <a href="{{ route('findle.statistics.index', $headless ? ['headless' => '1'] : []) }}"
-         class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
-        Back to Overview
-      </a>
+      <div class="flex items-center space-x-2">
+        <a href="{{ route('findle.statistics.compare', array_merge(['urls' => [$url]], $headless ? ['headless' => '1'] : [])) }}"
+           class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+          Compare
+        </a>
+        <a href="{{ route('findle.statistics.index', $headless ? ['headless' => '1'] : []) }}"
+           class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
+          Back to Overview
+        </a>
+      </div>
     </div>
   </div>
 
@@ -122,6 +128,36 @@
         </div>
       @else
         <p class="text-gray-500">No query parameters recorded</p>
+      @endif
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6 lg:col-span-2">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">References</h3>
+      @if($references->count() > 0)
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+            <tr>
+              <th class="py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+              <th class="py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Visitors</th>
+              <th class="py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Visits</th>
+              <th class="py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+            @foreach($references as $reference)
+              <tr>
+                <td class="py-2 text-sm text-gray-900 font-mono">{{ $reference->reference }}</td>
+                <td class="py-2 text-sm text-gray-500 text-right">{{ number_format($reference->unique_visitors) }}</td>
+                <td class="py-2 text-sm text-gray-500 text-right">{{ number_format($reference->total_visits) }}</td>
+                <td class="py-2 text-sm text-gray-500 text-right">{{ $reference->last_visit_at ? \Carbon\Carbon::parse($reference->last_visit_at)->format('Y-m-d H:i') : 'Unknown' }}</td>
+              </tr>
+            @endforeach
+            </tbody>
+          </table>
+        </div>
+      @else
+        <p class="text-gray-500">No references recorded</p>
       @endif
     </div>
   </div>

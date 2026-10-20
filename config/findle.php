@@ -63,6 +63,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Visits Table Name
+    |--------------------------------------------------------------------------
+    |
+    | The name of the database table that stores every single visit of a page view.
+    |
+    */
+    'visits_table_name'   => env('FINDLE_VISITS_TABLE_NAME', 'page_view_visits'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Bot Detection
     |--------------------------------------------------------------------------
     |
@@ -113,10 +123,11 @@ return [
     |
     */
     'js_tracking' => [
-        'enabled'        => env('FINDLE_JS_TRACKING_ENABLED', false),
-        'token_lifetime' => env('FINDLE_JS_TOKEN_LIFETIME', 300), // 5 minutes
-        'rate_limit'     => env('FINDLE_JS_RATE_LIMIT', 60), // requests per minute per IP
-        'async_load'     => env('FINDLE_JS_ASYNC_LOAD', true),
+        'enabled'             => env('FINDLE_JS_TRACKING_ENABLED', false),
+        'token_lifetime'      => env('FINDLE_JS_TOKEN_LIFETIME', 300), // 5 minutes
+        'rate_limit'          => env('FINDLE_JS_RATE_LIMIT', 60), // requests per minute per IP
+        'async_load'          => env('FINDLE_JS_ASYNC_LOAD', true),
+        'require_interaction' => env('FINDLE_JS_REQUIRE_INTERACTION', true), // only count visitors that use mouse, touch or keyboard
     ],
 
     /*
@@ -129,4 +140,15 @@ return [
     |
     */
     'tracking_method' => env('FINDLE_TRACKING_METHOD', 'middleware'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reference Parameters
+    |--------------------------------------------------------------------------
+    |
+    | Query parameters that identify where a visitor came from, e.g. ?ref=newsletter.
+    | The first parameter found in the URL is stored as the reference.
+    |
+    */
+    'reference_parameters' => ['ref', 'utm_ref'],
 ];
