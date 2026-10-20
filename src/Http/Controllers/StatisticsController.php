@@ -42,19 +42,22 @@ class StatisticsController extends Controller
         $days = (int) $request->get('days', 90);
         $sinceDate = now()->subDays($days);
 
-        $totalVisits = PageViewVisit::since($sinceDate)->count();
-        $totalUniqueVisits = PageViewVisit::since($sinceDate)->distinct()->count('page_view_id');
+        $totalStats = array_merge($this->getVisitCounts($sinceDate), [
+            'top_pages'   => $this->getTopPages($sinceDate, 10),
+            'last_visits' => $this->getLastVisits(10),
+            'days'        => $days,
+        ]);
 
-        $totalStats = [
-            'total_visits'        => $totalVisits,
-            'total_unique_visits' => $totalUniqueVisits,
-            'avg_views_per_visit' => $totalUniqueVisits > 0 ? round($totalVisits / $totalUniqueVisits, 2) : 0,
-            'top_pages'           => $this->getTopPages($sinceDate, 10),
-            'last_visits'         => $this->getLastVisits(10),
-            'days'                => $days,
-        ];
+        $startOfToday = now()->startOfDay();
+
+        $todayStats = array_merge($this->getVisitCounts($startOfToday), [
+            'top_pages'   => $this->getTopPages($startOfToday, 10),
+            'last_visits' => $this->getLastVisits(10, $startOfToday),
+        ]);
 
         $dailyStats = PageViewVisit::dailyStats($sinceDate);
+
+        $halfHourlyStats = PageViewVisit::halfHourlyStats($startOfToday);
 
         $references = $this->getReferences();
 
@@ -64,7 +67,9 @@ class StatisticsController extends Controller
             'sortDirection',
             'search',
             'totalStats',
+            'todayStats',
             'dailyStats',
+            'halfHourlyStats',
             'references',
             'headless'
         );
@@ -74,6 +79,23 @@ class StatisticsController extends Controller
         }
 
         return view('findle::statistics.index', $data);
+    }
+
+    /** @return array{
+        total_visits: int,
+        total_unique_visits: int,
+        avg_views_per_visit: float|int
+    } */
+    private function getVisitCounts(CarbonInterface $since): array
+    {
+        $totalVisits = PageViewVisit::since($since)->count();
+        $totalUniqueVisits = PageViewVisit::since($since)->distinct()->count('page_view_id');
+
+        return [
+            'total_visits'        => $totalVisits,
+            'total_unique_visits' => $totalUniqueVisits,
+            'avg_views_per_visit' => $totalUniqueVisits > 0 ? round($totalVisits / $totalUniqueVisits, 2) : 0,
+        ];
     }
 
     /** @return BaseCollection<int, object> */
@@ -92,12 +114,13 @@ class StatisticsController extends Controller
             ->get();
     }
 
-    private function getLastVisits(int $limit): BaseCollection
+    private function getLastVisits(int $limit, ?CarbonInterface $since = null): BaseCollection
     {
         $pageViewsTable = PageView::tableName();
         $visitsTable = PageViewVisit::tableName();
 
         return PageViewVisit::joinPageViews()
+            ->when($since, fn ($query) => $query->since($since))
             ->select("{$pageViewsTable}.url", "{$visitsTable}.visited_at")
             ->orderBy("{$visitsTable}.visited_at", 'desc')
             ->orderBy("{$visitsTable}.id", 'desc')
