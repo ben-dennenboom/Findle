@@ -3,6 +3,7 @@
 namespace Dennenboom\Findle\Models;
 
 use Carbon\CarbonInterface;
+use Carbon\CarbonInterval;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -88,6 +89,59 @@ class PageViewVisit extends Model
                 'total_visits'  => (int) ($statsPerDate[$date]->total_visits ?? 0),
                 'unique_visits' => (int) ($statsPerDate[$date]->unique_visits ?? 0),
             ]);
+    }
+
+    /**
+     * Includes the half hours without visits; half hours that are still to come have null values.
+     *
+     * @return Collection<int, array{
+     *     time: string,
+     *     total_visits: ?int,
+     *     unique_visits: ?int
+     * }>
+     */
+    public static function halfHourlyStats(CarbonInterface $day): Collection
+    {
+        $pageViewsTable = PageView::tableName();
+        $visitsTable = static::tableName();
+
+        $startOfDay = $day->copy()->startOfDay();
+        $endOfDay = $day->copy()->endOfDay();
+
+        $visitsPerHalfHour = static::joinPageViews()
+            ->whereBetween("{$visitsTable}.visited_at", [$startOfDay, $endOfDay])
+            ->select("{$visitsTable}.visited_at", "{$pageViewsTable}.visitor_hash")
+            ->get()
+            ->groupBy(fn (PageViewVisit $visit) => static::halfHourOf($visit->visited_at));
+
+        return collect(CarbonPeriod::create($startOfDay, CarbonInterval::minutes(30), $endOfDay))
+            ->map(function (CarbonInterface $halfHour) use ($visitsPerHalfHour) {
+                $time = static::halfHourOf($halfHour);
+
+                if ($halfHour->isFuture()) {
+                    return [
+                        'time'          => $time,
+                        'total_visits'  => null,
+                        'unique_visits' => null,
+                    ];
+                }
+
+                $visits = $visitsPerHalfHour->get($time, collect());
+
+                return [
+                    'time'          => $time,
+                    'total_visits'  => $visits->count(),
+                    'unique_visits' => $visits->unique('visitor_hash')->count(),
+                ];
+            })
+            ->values();
+    }
+
+    private static function halfHourOf(CarbonInterface $moment): string
+    {
+        $minutes = $moment->minute < 30 ? '00' : '30';
+
+        return "{$moment->format('H')}:{$minutes}";
     }
 
     /** @return Collection<int, object> */

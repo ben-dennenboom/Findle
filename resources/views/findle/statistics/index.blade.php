@@ -16,35 +16,50 @@
     </div>
   @endif
 
-  <div class="flex flex-wrap gap-6 mb-8">
-    <div class="flex-none w-full sm:w-2/12 bg-white rounded-lg shadow p-6 flex flex-col justify-between min-h-[200px]">
-      <div class="flex-1">
-        <p class="text-sm font-medium text-gray-600 break-words">Total Views ({{ $totalStats['days'] }} days)</p>
-        <p class="text-2xl font-bold text-gray-900 break-words">{{ number_format($totalStats['total_visits']) }}</p>
-        <p class="text-sm font-medium text-gray-600 mt-10 break-words">Avg Views Per Visit ({{ $totalStats['days'] }} days)</p>
-        <p class="text-2xl font-bold text-gray-900 break-words">{{ $totalStats['avg_views_per_visit'] }}</p>
-      </div>
-    </div>
+  @php
+    $statRows = [
+      [
+        'stats'             => $todayStats,
+        'period'            => 'today',
+        'last_visits_title' => 'Last 10 Visits Today',
+        'top_pages_title'   => 'Top 10 Most Viewed Pages Today',
+      ],
+      [
+        'stats'             => $totalStats,
+        'period'            => "{$totalStats['days']} days",
+        'last_visits_title' => 'Last 10 Visits',
+        'top_pages_title'   => 'Top 10 Most Viewed Pages',
+      ],
+    ];
+  @endphp
 
-    <div class="flex-none w-full sm:w-5/12 bg-white rounded-lg shadow p-6 flex flex-col justify-between min-h-[200px]">
-      <div class="flex-1">
-        <p class="text-sm font-medium text-gray-600 break-words">Last 10 Visits</p>
+  <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 mb-8">
+    @foreach($statRows as $row)
+      <div class="sm:col-span-2 bg-white rounded-lg shadow p-6 min-h-[200px]">
+        <p class="text-sm font-medium text-gray-600 break-words">Total Views ({{ $row['period'] }})</p>
+        <p class="text-2xl font-bold text-gray-900 break-words">{{ number_format($row['stats']['total_visits']) }}</p>
+        <p class="text-sm font-medium text-gray-600 mt-10 break-words">Avg Views Per Visit ({{ $row['period'] }})</p>
+        <p class="text-2xl font-bold text-gray-900 break-words">{{ $row['stats']['avg_views_per_visit'] }}</p>
+      </div>
+
+      <div class="sm:col-span-5 bg-white rounded-lg shadow p-6 min-h-[200px]">
+        <p class="text-sm font-medium text-gray-600 break-words">{{ $row['last_visits_title'] }}</p>
         <div class="mt-2 space-y-2 max-h-40 overflow-y-auto">
-          @foreach($totalStats['last_visits'] as $visit)
+          @forelse($row['stats']['last_visits'] as $visit)
             <div class="text-xs border-l-2 border-blue-200 pl-2" title="{{ $visit['url'] }}">
               <div class="font-medium text-gray-800 break-words">{{ $visit['page'] ?: '/' }}</div>
               <div class="text-gray-500 break-words">{{ $visit['timestamp'] }}</div>
             </div>
-          @endforeach
+          @empty
+            <p class="text-xs text-gray-500">No visits yet</p>
+          @endforelse
         </div>
       </div>
-    </div>
 
-    <div class="flex-none w-full sm:w-5/12 bg-white rounded-lg shadow p-6 flex flex-col justify-between min-h-[200px]">
-      <div class="flex-1">
-        <p class="text-sm font-medium text-gray-600 break-words">Top 10 Most Viewed Pages</p>
+      <div class="sm:col-span-5 bg-white rounded-lg shadow p-6 min-h-[200px]">
+        <p class="text-sm font-medium text-gray-600 break-words">{{ $row['top_pages_title'] }}</p>
         <div class="mt-2 space-y-1 overflow-y-auto max-h-40">
-          @foreach($totalStats['top_pages'] as $index => $page)
+          @forelse($row['stats']['top_pages'] as $index => $page)
             @php
               $displayUrl = preg_replace('#^https?://[^/]+#', '', $page->url);
               $displayUrl = $displayUrl ?: '/';
@@ -53,8 +68,21 @@
               <span class="break-words flex-1 mr-2">{{ $index + 1 }}. {{ $displayUrl }}</span>
               <span class="font-medium flex-shrink-0">({{ $page->visit_count }})</span>
             </div>
-          @endforeach
+          @empty
+            <p class="text-xs text-gray-500">No visits yet</p>
+          @endforelse
         </div>
+      </div>
+    @endforeach
+  </div>
+
+  <div class="bg-white rounded-lg shadow mb-8">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-medium text-gray-900">Today's Visits (Per Half Hour)</h2>
+    </div>
+    <div class="p-6">
+      <div class="relative">
+        <canvas id="todayVisitsChart" width="800" height="300"></canvas>
       </div>
     </div>
   </div>
@@ -270,75 +298,83 @@
 <script src="{{ config('findle.assets.chartjs') }}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    const ctx = document.getElementById('visitsChart').getContext('2d');
+    const renderVisitsChart = function (canvasId, labels, totalVisitsData, uniqueVisitsData) {
+      new Chart(document.getElementById(canvasId).getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Total Views',
+              data: totalVisitsData,
+              borderColor: 'rgb(59, 130, 246)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              tension: 0.1,
+              fill: false
+            },
+            {
+              label: 'Unique Visits',
+              data: uniqueVisitsData,
+              borderColor: 'rgb(16, 185, 129)',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.1,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            },
+            x: {
+              display: true,
+              ticks: {
+                maxTicksLimit: 12
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          }
+        }
+      });
+    };
+
+    const halfHourlyStats = @json($halfHourlyStats);
+
+    renderVisitsChart(
+      'todayVisitsChart',
+      halfHourlyStats.map(stat => stat.time),
+      halfHourlyStats.map(stat => stat.total_visits),
+      halfHourlyStats.map(stat => stat.unique_visits)
+    );
 
     const dailyStats = @json($dailyStats);
 
-    const labels = dailyStats.map(stat => {
-      const date = new Date(stat.date);
-      return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
-    });
-
-    const totalVisitsData = dailyStats.map(stat => stat.total_visits);
-    const uniqueVisitsData = dailyStats.map(stat => stat.unique_visits);
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Total Views',
-            data: totalVisitsData,
-            borderColor: 'rgb(59, 130, 246)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.1,
-            fill: false
-          },
-          {
-            label: 'Unique Visits',
-            data: uniqueVisitsData,
-            borderColor: 'rgb(16, 185, 129)',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.1,
-            fill: false
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              precision: 0
-            }
-          },
-          x: {
-            display: true,
-            ticks: {
-              maxTicksLimit: 10
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top'
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false
-          }
-        },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
-        }
-      }
-    });
+    renderVisitsChart(
+      'visitsChart',
+      dailyStats.map(stat => new Date(stat.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
+      dailyStats.map(stat => stat.total_visits),
+      dailyStats.map(stat => stat.unique_visits)
+    );
   });
 </script>
 
